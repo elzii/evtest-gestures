@@ -1158,60 +1158,76 @@ static int print_events(int fd)
 			last_ev_time = ev[i].input_event_sec;
 
 
+			if ( is_mt ) {
+				if ( x_diff < 1800 && y_diff > 1800 ) {
+					if ( last_y2 > last_y1 ) direction = "UP";
+					if ( last_y2 < last_y1 ) direction = "DOWN";
+				}
+				if ( y_diff < 1800 && x_diff > 1800 ) {
+					if ( last_x2 > last_x1 ) direction = "LEFT";
+					if ( last_x2 < last_x1 ) direction = "RIGHT";
+				}
+			}
+
 			if (type == EV_ABS && code == ABS_MT_SLOT ) {
 				if ( value == 2 ) {
-					time_start = time(NULL);
-					if ( debug_flag ) {
-						printf("MULTITOUCH_GESTURE_START\n");
-					}
-					capturing = 1;
-					is_mt = 1;
-				} else {
-					if ( value == 0 ) {
+					if ( capturing == 0 ) {
+						time(&time_start);
 						if ( debug_flag ) {
-							printf("MULTITOUCH_GESTURE_END\n");
-							/* is_mt = 0; */
+							printf("MULTITOUCH_GESTURE_START\n");
 						}
+
+						capturing = 1;
+						is_mt = 1;
 					}
+				} 
+				if ( value == 0 && is_mt ) {
+					if ( debug_flag ) {
+						printf("MULTITOUCH_GESTURE_END\n");
+					}
+					/* if ( capturing ) { */
+					/* 	capturing = 0; */
+					/* 	is_mt = 0; */
+					/* } */
 				}
 			}
 
 
-			if (type == EV_ABS && (code == ABS_MT_PRESSURE && value == 0)) {
-				if ( debug_flag ) {
-					printf("MULTITOUCH_GESTURE_END\n");
-				}
-				if ( is_mt ) {
-					printf("SWIPE_%s\n", direction);
-				}
-				capturing = 0;
-				x_diff = 0;
-				is_mt = 0;
-				y_diff = 0;
-			}
+			/* if (type == EV_ABS && (code == ABS_MT_PRESSURE && value == 0)) { */
+			/* 	if ( is_mt && strcmp(direction,"CENTER") != 0) { */
+			/* 		printf("SWIPE_%s\n", direction); */
+			/* 	} */
+			/* 	direction = "CENTER"; */
+			/* 	capturing = 0; */
+			/* 	is_mt = 0; */
+			/* 	x_diff = 0; */
+			/* 	y_diff = 0; */
+			/* } */
 
 			/* if (type == EV_ABS && code == ABS_PRESSURE && value == 0) { */
 			/* 	printf("MULTITOUCH_GESTURE_END\n"); */
 			/* } */
 
 			if (type == EV_ABS && code == ABS_MT_PRESSURE && value == 0) {
-				time_end = time(NULL);
-				time_diff = difftime(time_start, time_end);
+				/* time_end = time(NULL); */
+				/* time_diff = difftime(time_start, time_end); */
 				if ( debug_flag ) {
-					printf("GESTURE_STOP, %f\n", fabs(time_diff));
-					is_mt = 0;
+					/* printf("GESTURE_STOP, %f\n", time_diff); */
+					printf("GESTURE_END\t (MT=%d,CAP=%d,IC=%i,DIR=%s)\n", is_mt, capturing, strcmp(direction,"CENTER"), direction);
 				}
-				/* capturing = 0; */
+				printf("SWIPE_%s\n", direction);
+				is_mt = 0;
+				capturing = 0;
+				direction = "CENTER";
+				/* last_y2 = last_y1; */
+				/* last_x2 = last_x1; */
+				y_diff = 0;
+				x_diff = 0;
 				/* printf("time_start = %lu\n", time_start); */
 				/* printf("time_end = %lu\n", time_end); */
 			}
 
 			if (type == EV_KEY && code == BTN_TOUCH && value == 0) {
-				y_diff = 0;
-				x_diff = 0;
-				last_y2 = last_y1;
-				last_x2 = last_x1;
-				capturing = 0;
 				if ( debug_flag ) {
 					printf("TOUCH_END\n");
 				}
@@ -1235,15 +1251,7 @@ static int print_events(int fd)
 					last_y2 = value;
 				}
 			}
-
-			if ( x_diff < 1500 && y_diff > 2000 ) {
-				if ( last_y2 > last_y1 ) direction = "UP";
-				if ( last_y2 < last_y1 ) direction = "DOWN";
-			}
-			if ( y_diff < 1500 && x_diff > 2000 ) {
-				if ( last_x2 > last_x1 ) direction = "LEFT";
-				if ( last_x2 < last_x1 ) direction = "RIGHT";
-			}
+				
 
 			if (type != EV_MSC && (code != MSC_RAW || code != MSC_SCAN)) {
 				if ( type == EV_ABS ) {
