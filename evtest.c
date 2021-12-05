@@ -1091,7 +1091,6 @@ int last_y1;
 int last_y2;
 long last_ev_time;
 long last_ev_timediff;
-int capturing = 0;
 int pulse = 0;
 
 /* time_t new_time = time(NULL); */
@@ -1118,8 +1117,9 @@ static int print_events(int fd)
 	fd_set rdfs;
 	
 	char *direction = "CENTER";
+	int capturing = 0;
+	int is_mt = 0;
 
-	time_start = time(NULL);
 
 	FD_ZERO(&rdfs);
 	FD_SET(fd, &rdfs);
@@ -1157,26 +1157,37 @@ static int print_events(int fd)
 			/* last_ev_time = ev[i].input_event_usec; */
 			last_ev_time = ev[i].input_event_sec;
 
-			if (type == EV_ABS && code == ABS_MT_SLOT) {
-				// Three finger swipe start!
+
+			if (type == EV_ABS && code == ABS_MT_SLOT ) {
 				if ( value == 2 ) {
 					time_start = time(NULL);
-					/* printf("GESTURE_START_3_FINGER\n"); */
+					if ( debug_flag ) {
+						printf("MULTITOUCH_GESTURE_START\n");
+					}
+					capturing = 1;
+					is_mt = 1;
+				} else {
+					if ( value == 0 ) {
+						if ( debug_flag ) {
+							printf("MULTITOUCH_GESTURE_END\n");
+							/* is_mt = 0; */
+						}
+					}
 				}
 			}
 
-
-			if (type == EV_ABS && code == ABS_MT_SLOT && value == 2 ) {
-				if ( debug_flag ) {
-					printf("MULTITOUCH_GESTURE_START\n");
-				}
-				capturing = 1;
-			}
 
 			if (type == EV_ABS && (code == ABS_MT_PRESSURE && value == 0)) {
-				/* printf("MULTITOUCH_GESTURE_END\n"); */
-				printf("SWIPE_%s\n", direction);
+				if ( debug_flag ) {
+					printf("MULTITOUCH_GESTURE_END\n");
+				}
+				if ( is_mt ) {
+					printf("SWIPE_%s\n", direction);
+				}
 				capturing = 0;
+				x_diff = 0;
+				is_mt = 0;
+				y_diff = 0;
 			}
 
 			/* if (type == EV_ABS && code == ABS_PRESSURE && value == 0) { */
@@ -1187,9 +1198,10 @@ static int print_events(int fd)
 				time_end = time(NULL);
 				time_diff = difftime(time_start, time_end);
 				if ( debug_flag ) {
-					printf("GESTURE_STOP, %f\n", time_diff);
+					printf("GESTURE_STOP, %f\n", fabs(time_diff));
+					is_mt = 0;
 				}
-				capturing = 0;
+				/* capturing = 0; */
 				/* printf("time_start = %lu\n", time_start); */
 				/* printf("time_end = %lu\n", time_end); */
 			}
@@ -1224,11 +1236,11 @@ static int print_events(int fd)
 				}
 			}
 
-			if ( x_diff < 1000 && y_diff > 1000 ) {
+			if ( x_diff < 1500 && y_diff > 2000 ) {
 				if ( last_y2 > last_y1 ) direction = "UP";
 				if ( last_y2 < last_y1 ) direction = "DOWN";
 			}
-			if ( y_diff < 1000 && x_diff > 1000 ) {
+			if ( y_diff < 1500 && x_diff > 2000 ) {
 				if ( last_x2 > last_x1 ) direction = "LEFT";
 				if ( last_x2 < last_x1 ) direction = "RIGHT";
 			}
